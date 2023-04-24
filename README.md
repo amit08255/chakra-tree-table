@@ -37,24 +37,28 @@ const DemoPage = () => {
             name: 'Akash',
             className: 'X',
             subject: 'Maths',
-            children: [
-                {
-                    id: 'row-1-1',
-                    name: 'Akash',
-                    className: 'XI',
-                    subject: 'Social Studies',
-                    children: [],
-                },
-            ],
+            ChildrenTitle: RowTitle, // Display title above rows given in child mapping for this row. RowTitle received props `data` of type TreeTableRowData
         },
         {
             id: 'row-2',
             name: 'Manish',
             className: 'IX',
             subject: 'Science',
-            children: [],
+            ChildrenTitle: RowTitle, // Display title above rows given in child mapping for this row. RowTitle received props `data` of type TreeTableRowData
         },
     ];
+    
+    const childMapping = {
+        'row-1': [
+            {
+                id: 'row-1-1',
+                name: 'Akash',
+                className: 'XI',
+                subject: 'Social Studies',
+                ChildrenTitle: RowTitle, // Display title above rows given in child mapping for this row. RowTitle received props `data` of type TreeTableRowData
+            },
+        ],
+    };
 
     const columns:TreeTableColumnData[] = [
         {

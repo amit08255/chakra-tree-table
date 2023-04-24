@@ -1,11 +1,12 @@
 import {
+    Box,
     Table, Tbody, Td, Th, Thead, Tr,
 } from '@chakra-ui/react';
 import * as React from 'react';
 
 export interface TreeTableRowData {
     id: string,
-    children: TreeTableRowData[],
+    ChildrenTitle?: React.FC<{data: TreeTableRowData}>,
     [key: string]: any,
 }
 
@@ -31,83 +32,109 @@ export type TreeTableProps = {
     classPrefix: string,
     data: TreeTableRowData[],
     columns: TreeTableColumnData[],
+    childMapping: {[key:string]: TreeTableRowData[]},
 };
 
 export type TreeTableRowProps = {
+    classPrefix: string,
     depth: number,
     data: TreeTableRowData[],
     columns: TreeTableColumnData[],
     expanded: {[key:string]: boolean},
+    childMapping: {[key:string]: TreeTableRowData[]},
     onExpand: (id: string, value: boolean) => void,
 };
 
 const TableRow = ({
-    data, columns, expanded, onExpand, depth,
+    data, columns, expanded, onExpand, depth, childMapping, classPrefix,
 }:TreeTableRowProps) => (
     <>
-        {data.map((row, rowIndex) => (
-            <>
-                <Tr
-                    key={`tbody-row-${row.id}`}
-                    data-rowid={row.id}
-                    data-depth={`${depth}`}
-                    data-isleaf={`${rowIndex === data.length - 1}`}
-                    data-haschildren={`${Array.isArray(row.children) && row.children.length > 0}`}
-                    data-isexpanded={`${expanded[row.id] === true}`}
-                >
-                    {columns.map((column, index) => {
-                        const CellElement = column.Cell;
+        {data.map((row, rowIndex) => {
+            const TitleNode = row.ChildrenTitle;
 
-                        return (
-                            <Td
-                                whiteSpace="nowrap"
-                                key={`tbody-row-data${row.id}-${index + 1}`}
+            return (
+                <>
+                    <Tr
+                        key={`tbody-row-${row.id}`}
+                        data-rowid={row.id}
+                        data-depth={`${depth}`}
+                        data-isleaf={`${rowIndex === data.length - 1}`}
+                        data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
+                        data-isexpanded={`${expanded[row.id] === true}`}
+                    >
+                        {columns.map((column, index) => {
+                            const CellElement = column.Cell;
+
+                            return (
+                                <Td
+                                    whiteSpace="nowrap"
+                                    key={`tbody-row-data${row.id}-${index + 1}`}
+                                    data-rowid={row.id}
+                                    data-depth={`${depth}`}
+                                    data-isleaf={`${rowIndex === data.length - 1}`}
+                                    data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
+                                    data-isexpanded={`${expanded[row.id] === true}`}
+                                >
+                                    <CellElement
+                                        data={row}
+                                        rowId={row.id}
+                                        depth={depth}
+                                        isLeaf={rowIndex === data.length - 1}
+                                        hasChildren={
+                                            Array.isArray(childMapping[row.id])
+                                            && childMapping[row.id].length > 0
+                                        }
+                                        isExpanded={expanded[row.id] === true}
+                                        totalChildren={
+                                            Array.isArray(childMapping[row.id])
+                                                ? childMapping[row.id].length : 0
+                                        }
+                                        onExpand={onExpand}
+                                        accessor={column.accessor}
+                                    />
+                                </Td>
+                            );
+                        })}
+                    </Tr>
+                    {
+                        expanded[row.id] === true && TitleNode ? (
+                            <Box
+                                className={`${classPrefix}-title`}
+                                display="table-row"
                                 data-rowid={row.id}
                                 data-depth={`${depth}`}
                                 data-isleaf={`${rowIndex === data.length - 1}`}
-                                data-haschildren={`${Array.isArray(row.children) && row.children.length > 0}`}
+                                data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
                                 data-isexpanded={`${expanded[row.id] === true}`}
                             >
-                                <CellElement
-                                    data={row}
-                                    rowId={row.id}
-                                    depth={depth}
-                                    isLeaf={rowIndex === data.length - 1}
-                                    hasChildren={
-                                        Array.isArray(row.children) && row.children.length > 0
-                                    }
-                                    isExpanded={expanded[row.id] === true}
-                                    totalChildren={
-                                        Array.isArray(row.children) ? row.children.length : 0
-                                    }
+                                <TitleNode data={row} />
+                            </Box>
+                        ) : null
+                    }
+                    {
+                        expanded[row.id] === true
+                        && Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0
+                            ? (
+                                <TableRow
+                                    classPrefix={classPrefix}
+                                    childMapping={childMapping}
+                                    data={childMapping[row.id]}
+                                    columns={columns}
+                                    expanded={expanded}
                                     onExpand={onExpand}
-                                    accessor={column.accessor}
+                                    depth={depth + 1}
                                 />
-                            </Td>
-                        );
-                    })}
-                </Tr>
-                {
-                    expanded[row.id] === true
-                    && Array.isArray(row.children) && row.children.length > 0
-                        ? (
-                            <TableRow
-                                data={row.children}
-                                columns={columns}
-                                expanded={expanded}
-                                onExpand={onExpand}
-                                depth={depth + 1}
-                            />
-                        )
-                        : null
-                }
-            </>
-        ))}
+                            )
+                            : null
+                    }
+                </>
+            );
+        })}
     </>
 );
 
 const TreeTable = ({
-    classPrefix, data, columns,
+    classPrefix, data, columns, childMapping,
 }:TreeTableProps) => {
     const [expanded, setExpanded] = React.useState<{[key:string]: boolean}>({});
 
@@ -130,6 +157,8 @@ const TreeTable = ({
             </Thead>
             <Tbody className={`${classPrefix}-body`}>
                 <TableRow
+                    classPrefix={classPrefix}
+                    childMapping={childMapping}
                     data={data}
                     columns={columns}
                     expanded={expanded}

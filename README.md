@@ -79,7 +79,7 @@ const DemoPage = () => {
     ];
 
     return (
-        <TreeTable classPrefix="tree-chakra" data={data} columns={columns} />
+        <TreeTable classPrefix="tree-chakra" data={data} columns={columns} childMapping={childMapping} />
     );
 };
 

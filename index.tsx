@@ -43,10 +43,13 @@ export type TreeTableRowProps = {
     expanded: {[key:string]: boolean},
     childMapping: {[key:string]: TreeTableRowData[]},
     onExpand: (id: string, value: boolean) => void,
+    rootId: string,
+    isParentLeaf: boolean,
 };
 
 const TableRow = ({
-    data, columns, expanded, onExpand, depth, childMapping, classPrefix,
+    data, columns, expanded, onExpand, depth, childMapping, classPrefix, rootId,
+    isParentLeaf,
 }:TreeTableRowProps) => (
     <>
         {data.map((row, rowIndex) => {
@@ -58,9 +61,10 @@ const TableRow = ({
                         key={`tbody-row-${row.id}`}
                         data-rowid={row.id}
                         data-depth={`${depth}`}
-                        data-isleaf={`${rowIndex === data.length - 1}`}
+                        data-isleaf={`${isParentLeaf && rowIndex === data.length - 1 && (expanded[row.id] !== true || (!Array.isArray(childMapping[row.id]) || childMapping[row.id].length < 1))}`}
                         data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
                         data-isexpanded={`${expanded[row.id] === true}`}
+                        data-rootid={rootId || row.id}
                     >
                         {columns.map((column, index) => {
                             const CellElement = column.Cell;
@@ -71,15 +75,22 @@ const TableRow = ({
                                     key={`tbody-row-data${row.id}-${index + 1}`}
                                     data-rowid={row.id}
                                     data-depth={`${depth}`}
-                                    data-isleaf={`${rowIndex === data.length - 1}`}
+                                    data-isleaf={`${isParentLeaf && rowIndex === data.length - 1 && (expanded[row.id] !== true || (Array.isArray(childMapping[row.id]) && childMapping[row.id].length < 1))}`}
                                     data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
                                     data-isexpanded={`${expanded[row.id] === true}`}
+                                    data-rootid={rootId || row.id}
                                 >
                                     <CellElement
                                         data={row}
                                         rowId={row.id}
                                         depth={depth}
-                                        isLeaf={rowIndex === data.length - 1}
+                                        isLeaf={
+                                            isParentLeaf
+                                            && rowIndex === data.length - 1
+                                            && (expanded[row.id] !== true
+                                                || (Array.isArray(childMapping[row.id])
+                                                && childMapping[row.id].length < 1))
+                                        }
                                         hasChildren={
                                             Array.isArray(childMapping[row.id])
                                             && childMapping[row.id].length > 0
@@ -103,9 +114,10 @@ const TableRow = ({
                                 display="table-row"
                                 data-rowid={row.id}
                                 data-depth={`${depth}`}
-                                data-isleaf={`${rowIndex === data.length - 1}`}
+                                data-isleaf={`${(depth === 0 || (isParentLeaf && rowIndex === data.length - 1)) && (!Array.isArray(childMapping[row.id]) || childMapping[row.id].length < 1)}`}
                                 data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
                                 data-isexpanded={`${expanded[row.id] === true}`}
+                                data-rootid={rootId || row.id}
                             >
                                 <TitleNode data={row} />
                             </Box>
@@ -123,6 +135,12 @@ const TableRow = ({
                                     expanded={expanded}
                                     onExpand={onExpand}
                                     depth={depth + 1}
+                                    rootId={rootId || row.id}
+                                    isParentLeaf={
+                                        depth === 0
+                                            ? true
+                                            : isParentLeaf && rowIndex === data.length - 1
+                                    }
                                 />
                             )
                             : null
@@ -164,6 +182,8 @@ const TreeTable = ({
                     expanded={expanded}
                     onExpand={onExpand}
                     depth={0}
+                    rootId={null}
+                    isParentLeaf
                 />
             </Tbody>
         </Table>

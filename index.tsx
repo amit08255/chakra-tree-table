@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading */
 import {
     Box,
     Table, Tbody, Td, Th, Thead, Tr,
@@ -6,7 +7,7 @@ import * as React from 'react';
 
 export interface TreeTableRowData {
     id: string,
-    ChildrenTitle?: React.FC<{data: TreeTableRowData}>,
+    ChildrenTitle?: React.FC<{data: TreeTableRowData, depth?: number}>,
     [key: string]: any,
 }
 
@@ -26,6 +27,8 @@ export interface TreeTableColumnData {
     Header: string|React.ReactNode,
     accessor: string,
     Cell: React.FC<TreeTableCellProps>,
+    cellStyles?: {[key:string]: any},
+    headerStyles?: {[key:string]: any},
   }
 
 export type TreeTableProps = {
@@ -79,6 +82,7 @@ const TableRow = ({
                                     data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
                                     data-isexpanded={`${expanded[row.id] === true}`}
                                     data-rootid={rootId || row.id}
+                                    {...(column.cellStyles || {})}
                                 >
                                     <CellElement
                                         data={row}
@@ -109,18 +113,21 @@ const TableRow = ({
                     </Tr>
                     {
                         expanded[row.id] === true && TitleNode ? (
-                            <Box
-                                className={`${classPrefix}-title`}
-                                display="table-row"
-                                data-rowid={row.id}
-                                data-depth={`${depth}`}
-                                data-isleaf={`${(depth === 0 || (isParentLeaf && rowIndex === data.length - 1)) && (!Array.isArray(childMapping[row.id]) || childMapping[row.id].length < 1)}`}
-                                data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
-                                data-isexpanded={`${expanded[row.id] === true}`}
-                                data-rootid={rootId || row.id}
-                            >
-                                <TitleNode data={row} />
-                            </Box>
+                            <Tr className="static-columns">
+                                <Td p="0" m="0" border="none" className="static-columns" colspan={columns.length}>
+                                    <Box
+                                        className={`${classPrefix}-title`}
+                                        data-rowid={row.id}
+                                        data-depth={`${depth}`}
+                                        data-isleaf={`${(depth === 0 || (isParentLeaf && rowIndex === data.length - 1)) && (!Array.isArray(childMapping[row.id]) || childMapping[row.id].length < 1)}`}
+                                        data-haschildren={`${Array.isArray(childMapping[row.id]) && childMapping[row.id].length > 0}`}
+                                        data-isexpanded={`${expanded[row.id] === true}`}
+                                        data-rootid={rootId || row.id}
+                                    >
+                                        <TitleNode data={row} depth={depth} />
+                                    </Box>
+                                </Td>
+                            </Tr>
                         ) : null
                     }
                     {
@@ -167,7 +174,7 @@ const TreeTable = ({
             <Thead className={`${classPrefix}-head`}>
                 <Tr>
                     {columns.map((column, index) => (
-                        <Th whiteSpace="nowrap" scope="col" key={`thead-${index + 1}`}>
+                        <Th whiteSpace="nowrap" scope="col" key={`thead-${index + 1}`} {...(column.headerStyles || {})}>
                             {column.Header}
                         </Th>
                     ))}

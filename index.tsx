@@ -11,6 +11,25 @@ export interface TreeTableRowData {
     [key: string]: any,
 }
 
+export interface RowGroupTitle {
+    groupKey: string,
+    count: number,
+    label: string,
+    isExpanded: boolean,
+    index: number,
+}
+
+export interface TreeTableGroupData {
+    label: string,
+    isExpanded: boolean,
+    title: React.FC<RowGroupTitle>,
+    data: TreeTableRowData[]
+}
+
+export interface GroupedTreeTableRowData {
+    [key: string]: TreeTableGroupData,
+}
+
 export interface TreeTableCellProps {
     rowId: string,
     data: TreeTableRowData,
@@ -29,13 +48,23 @@ export interface TreeTableColumnData {
     Cell: React.FC<TreeTableCellProps>,
     cellStyles?: {[key:string]: any},
     headerStyles?: {[key:string]: any},
-  }
+}
+
+export interface TreeTableMarkerProps {
+    onExpandAll: () => void,
+    onCollapseAll: () => void,
+}
 
 export type TreeTableProps = {
+    // prefix to class name which allows manipulating Tree table UI by CSS
     classPrefix: string,
-    data: TreeTableRowData[],
+    data: TreeTableRowData[]|GroupedTreeTableRowData,
+    // List of columns to be displayed in header and node to render for each column
     columns: TreeTableColumnData[],
+    // Stores table data with list of child mapped by ID as key
     childMapping: {[key:string]: TreeTableRowData[]},
+    // Only used for features like expand/collapse all
+    MarkerNode?: React.FC<TreeTableMarkerProps>,
 };
 
 export type TreeTableRowProps = {
@@ -159,9 +188,16 @@ const TableRow = ({
 );
 
 const TreeTable = ({
-    classPrefix, data, columns, childMapping,
+    classPrefix, data, columns, childMapping, MarkerNode,
 }:TreeTableProps) => {
     const [expanded, setExpanded] = React.useState<{[key:string]: boolean}>({});
+
+    const isGroupedTableData = React.useCallback(() => {
+        const keys = Object.keys(data);
+        return (
+            keys.length > 0 && data[keys[0]].label
+            && data[keys[0]].title && Array.isArray(data[keys[0]].data));
+    }, [data]);
 
     const onExpand = (id:string, val: boolean) => {
         const expandData = { ...expanded };
@@ -169,32 +205,102 @@ const TreeTable = ({
         setExpanded(expandData);
     };
 
+    const onExpandCollapseFirstLevel = (val:boolean) => {
+        const expandedVal = { ...expanded };
+
+        Object.keys(childMapping).forEach((key) => {
+            expandedVal[key] = val;
+        });
+
+        setExpanded(expandedVal);
+    };
+
+    const onExpandAll = () => onExpandCollapseFirstLevel(true);
+
+    const onCollapseAll = () => onExpandCollapseFirstLevel(false);
+
     return (
-        <Table className={`${classPrefix}-table`}>
-            <Thead className={`${classPrefix}-head`}>
-                <Tr>
-                    {columns.map((column, index) => (
-                        <Th whiteSpace="nowrap" scope="col" key={`thead-${index + 1}`} {...(column.headerStyles || {})}>
-                            {column.Header}
-                        </Th>
-                    ))}
-                </Tr>
-            </Thead>
-            <Tbody className={`${classPrefix}-body`}>
-                <TableRow
-                    classPrefix={classPrefix}
-                    childMapping={childMapping}
-                    data={data}
-                    columns={columns}
-                    expanded={expanded}
-                    onExpand={onExpand}
-                    depth={0}
-                    rootId={null}
-                    isParentLeaf
-                />
-            </Tbody>
-        </Table>
+        <>
+            <Table className={`${classPrefix}-table`}>
+                <Thead className={`${classPrefix}-head`}>
+                    <Tr>
+                        {columns.map((column, index) => (
+                            <Th whiteSpace="nowrap" scope="col" key={`thead-${index + 1}`} {...(column.headerStyles || {})}>
+                                {column.Header}
+                            </Th>
+                        ))}
+                    </Tr>
+                </Thead>
+                <Tbody className={`${classPrefix}-body`}>
+                    {
+                        !isGroupedTableData() ? (
+                            <TableRow
+                                classPrefix={classPrefix}
+                                childMapping={childMapping}
+                                data={data as TreeTableRowData[]}
+                                columns={columns}
+                                expanded={expanded}
+                                onExpand={onExpand}
+                                depth={0}
+                                rootId={null}
+                                isParentLeaf
+                            />
+                        ) : null
+                    }
+                    {
+                        isGroupedTableData() ? (
+                            Object.keys(data).map((key, index) => {
+                                const groupData:TreeTableGroupData = data[key];
+                                const GroupTitle = groupData.title;
+
+                                return (
+                                    <>
+                                        <Tr className="group-title-columns">
+                                            <Td p="0" m="0" border="none" className="group-title-columns" colspan={columns.length}>
+                                                <GroupTitle
+                                                    groupKey={key}
+                                                    isExpanded={groupData.isExpanded}
+                                                    label={groupData.label}
+                                                    count={groupData.data.length}
+                                                    index={index}
+                                                />
+                                            </Td>
+                                        </Tr>
+                                        {
+                                            groupData.isExpanded ? (
+                                                <TableRow
+                                                    classPrefix={classPrefix}
+                                                    childMapping={childMapping}
+                                                    data={groupData.data}
+                                                    columns={columns}
+                                                    expanded={expanded}
+                                                    onExpand={onExpand}
+                                                    depth={0}
+                                                    rootId={null}
+                                                    isParentLeaf
+                                                />
+                                            ) : null
+                                        }
+                                    </>
+                                );
+                            })
+                        ) : null
+                    }
+                </Tbody>
+            </Table>
+            <Box display="none">
+                {
+                    MarkerNode
+                        ? <MarkerNode onExpandAll={onExpandAll} onCollapseAll={onCollapseAll} />
+                        : null
+                }
+            </Box>
+        </>
     );
+};
+
+TreeTable.defaultProps = {
+    MarkerNode: null,
 };
 
 export default TreeTable;
